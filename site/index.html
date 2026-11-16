@@ -2,43 +2,52 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Quantum Atlas</title>
-  <meta name="description" content="The newest quantum physics research in plain words, with a hands-on demo for every paper and a map of how ideas connect. Updated every day from arXiv.">
-  <meta name="theme-color" content="#6c4cf5">
+  <meta name="description" content="Fly through every new idea in quantum physics. The newest arXiv papers as a living galaxy, in plain words, with a hands-on demo for each one. Updated daily.">
+  <meta name="theme-color" content="#070815">
+  <meta property="og:title" content="Quantum Atlas">
+  <meta property="og:description" content="The newest quantum physics research as a galaxy you can explore, in plain words, with a demo for every paper.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+    } }
+  </script>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js" crossorigin>
 </head>
 <body>
+  <div class="sky" aria-hidden="true"></div>
+  <div class="cursor-glow" aria-hidden="true"></div>
   <a class="skip" href="#app">Skip to content</a>
   <header class="top">
-    <div class="top-inner">
-      <a class="brand" href="#/">
-        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="3.2" fill="var(--accent)"/><ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="var(--c2)" stroke-width="2"/><ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="var(--c3)" stroke-width="2" transform="rotate(60 16 16)"/><ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="var(--c4)" stroke-width="2" transform="rotate(120 16 16)"/></svg>
-        Quantum Atlas
-      </a>
-      <nav class="nav" aria-label="Main">
-        <a href="#/">Discover</a>
-        <a href="#/map">Map</a>
-        <a href="#/fields">Fields</a>
-        <a href="#/play">Play</a>
-        <a href="#/learn">Learn</a>
-        <a href="#/saved">Saved</a>
-        <a href="#/about">About</a>
-      </nav>
-      <button class="theme-btn" id="theme" type="button" aria-label="Switch light or dark mode">◐</button>
-    </div>
+    <a class="brand" href="#/" aria-label="Quantum Atlas home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="3.4" fill="#fff6d6"/><g class="orbit"><ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="#4de8ff" stroke-width="1.6"/></g><g class="orbit"><ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="#8f7bff" stroke-width="1.6" transform="rotate(60 16 16)"/></g><ellipse cx="16" cy="16" rx="13" ry="5" fill="none" stroke="#ff7ad9" stroke-width="1.6" transform="rotate(120 16 16)"/></svg>
+      <span>QUANTUM ATLAS</span>
+    </a>
+    <button class="search-btn glass" id="open-search" type="button" aria-label="Search papers, ideas and demos"><span aria-hidden="true">⌕</span><span class="label">Search the atlas</span><kbd>⌘K</kbd></button>
   </header>
-  <main id="app" tabindex="-1"><div class="loading">Loading the latest papers…</div></main>
+  <nav class="nav glass" aria-label="Main">
+    <a href="#/"><span class="i" aria-hidden="true">✦</span>Explore</a>
+    <a href="#/map"><span class="i" aria-hidden="true">◎</span>Galaxy</a>
+    <a href="#/fields"><span class="i" aria-hidden="true">⌖</span>Fields</a>
+    <a href="#/play"><span class="i" aria-hidden="true">◐</span>Play</a>
+    <a href="#/learn"><span class="i" aria-hidden="true">☰</span>Learn</a>
+    <a href="#/saved"><span class="i" aria-hidden="true">♡</span>Saved</a>
+  </nav>
+  <main id="app" tabindex="-1"><div class="loading">Tuning the telescope…</div></main>
   <footer>
-    <div class="inner">
-      <p>Papers and abstracts come from <a href="https://arxiv.org">arXiv</a>. Thank you to arXiv for use of its open access interoperability. Reference data from <a href="https://www.semanticscholar.org">Semantic Scholar</a>. Summaries are made automatically and can be wrong, so always check the original paper.</p>
-      <p id="updated"></p>
+    <div class="wrap">
+      <p>Papers and abstracts come from <a href="https://arxiv.org">arXiv</a>. Thank you to arXiv for use of its open access interoperability. Reference data from <a href="https://www.semanticscholar.org">Semantic Scholar</a>. Summaries are made automatically and can be wrong, so always check the original paper. <a href="#/about">About and credits</a>.</p>
+      <p id="updated" class="mono"></p>
     </div>
   </footer>
+  <div class="grain" aria-hidden="true"></div>
 
   <script src="js/demo-kit.js"></script>
   <script src="demos/bloch.js"></script>

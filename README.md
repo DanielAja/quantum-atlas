@@ -1,18 +1,19 @@
 # Quantum Atlas
 
-**The newest quantum physics research, in plain words, with a hands-on demo for every paper and a map of how the ideas connect.**
+**Every new idea in quantum physics, as a galaxy you can fly through. The newest papers in plain words, with a hands-on demo for each one.**
 
 Live site: https://danielaja.github.io/quantum-atlas/
 
 Quantum Atlas reads the newest papers on arXiv every day and turns them into something a curious person can explore:
 
-- **Discover**: fresh papers with a short summary, the main claims, and links to the arXiv page, the PDF and the DOI. Filter by research area, time and trending ideas, or press **🎲 Show me something different**.
-- **Paper pages**: summary, main claims, "why it matters", the original abstract, plain explanations of every key idea, connected papers, a BibTeX citation, and an interactive demo of the paper's core idea.
-- **Map**: an interactive graph of papers linked by shared ideas, shared authors, citations and shared references, with idea clusters you can light up. Switch to **Ideas** to see how concepts connect across the whole field.
-- **Fields**: 14 regions of quantum physics, how busy each one is, what a PhD there tends to look like, a quick "where might you fit?" quiz, and a personal compass built from what you read and save.
-- **Play**: 16 hands-on simulations (Bloch sphere, interferometer, double slit, Bell/CHSH test, tunnelling, harmonic oscillator, decoherence, Rabi oscillations, spin chain, quantum walk, BB84 key sharing, Grover search, error correction, quantum sensing, the Page curve, Bose–Einstein condensation).
-- **Learn**: a beginner path, a searchable glossary, and free places to learn more.
-- **Saved**: hearted papers, stored only in your browser, exportable as text or BibTeX.
+- **Explore**: a living 3D galaxy on the home page where every star is a paper (colour = field, brightness = freshness). Hover to peek, click to dive in. Below it: a daily *Star of the day* with its demo, a marquee of trending ideas, and the fresh-papers feed with search, field filters and sorting.
+- **Galaxy**: the full-screen 3D map. Orbit, zoom, filter by field and time, light up idea clusters, show idea names floating over the regions where they appear, and click any star to see its connected papers (shared ideas, authors, citations, shared references). A flat 2D view is one click away and is used automatically without WebGL.
+- **Paper pages**: summary, main claims, "why it matters", the original abstract, plain explanations of every key idea, connected papers, a BibTeX citation, links to arXiv, PDF and DOI, and the matching interactive demo.
+- **Fields**: a PhD compass. 14 regions of quantum physics with how busy each is and what a PhD there looks like; hovering a field turns the galaxy to it, and a five-question quiz points the galaxy at your best match. Your personal compass fills in as you read and save.
+- **Play**: 16 hands-on simulations (Bloch sphere, interferometer, double slit, Bell/CHSH test, tunnelling, harmonic oscillator, decoherence, Rabi oscillations, spin chain, quantum walk, BB84, Grover search, error correction, quantum sensing, the Page curve, Bose–Einstein condensation).
+- **Learn**: a twelve-stop beginner's orbit, a searchable glossary and free places to go deeper.
+- **Saved**: your hearted papers lit up as "your constellation", exportable as text or BibTeX. Stored only in your browser.
+- **⌘K / "/"**: a search palette for papers, ideas, fields, demos and pages from anywhere.
 
 It started as a tool for choosing a PhD direction, so breadth matters: besides `quant-ph` it reads quantum-related papers from `cond-mat.quant-gas`, `cond-mat.mes-hall`, `cond-mat.str-el`, `cond-mat.supr-con`, `hep-th`, `gr-qc`, `physics.atom-ph` and `physics.optics`.
 
@@ -25,6 +26,7 @@ Everything is free and runs on GitHub: a static site on GitHub Pages and a daily
 scripts/update.py              arXiv + Semantic Scholar → site/data/*.json (Python standard library only)
 scripts/ai_summaries.py        OPTIONAL AI summaries, off unless ANTHROPIC_API_KEY is set
 site/                          the website (plain HTML, CSS and JavaScript, no build step)
+site/js/cosmos.js              the three.js galaxy (one Points draw call, additive glow sprites, no post-processing)
 site/data/concepts.json        hand-written list of research areas and ideas (edit this to tune tagging)
 site/demos/*.js                one file per interactive demo (see site/demos/README.md)
 ```
@@ -65,12 +67,14 @@ python3 -m http.server 8000 --directory site
 - **Paper data:** [arXiv](https://arxiv.org). Thank you to arXiv for use of its open access interoperability. Titles and abstracts belong to their authors; every page links to the original.
 - **Reference and citation data:** [Semantic Scholar](https://www.semanticscholar.org) by the Allen Institute for AI, used under the [Semantic Scholar API License](https://www.semanticscholar.org/product/api/license).
 - **DOIs:** resolved by [doi.org](https://www.doi.org); arXiv DOIs are registered with [DataCite](https://datacite.org).
-- **Fonts:** [Fraunces](https://fonts.google.com/specimen/Fraunces) and [Nunito](https://fonts.google.com/specimen/Nunito) via Google Fonts, SIL Open Font License 1.1.
+- **3D:** [three.js](https://threejs.org) r186 (MIT License), loaded from [jsDelivr](https://www.jsdelivr.com) through an import map.
+- **Fonts:** [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif), [Inter](https://fonts.google.com/specimen/Inter), [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) and [Unbounded](https://fonts.google.com/specimen/Unbounded) via Google Fonts, SIL Open Font License 1.1.
+- **Design inspiration:** award-winning WebGL sites such as Igloo Inc, Lusion, Active Theory, NASA's Eyes and the Wikiverse/100,000 Stars galaxies.
 - **Explanations** link to [Wikipedia](https://www.wikipedia.org), [Quantum Country](https://quantum.country), the [Error Correction Zoo](https://errorcorrectionzoo.org), the [Quantum Algorithm Zoo](https://quantumalgorithmzoo.org) and other free resources.
 - **Hosting and automation:** GitHub Pages and GitHub Actions (`actions/checkout`, `actions/setup-python`, `actions/cache`, `actions/configure-pages`, `actions/upload-pages-artifact`, `actions/deploy-pages`).
 - **Optional:** the [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python) (MIT) when AI summaries are switched on.
 
-The site itself, the demos and the map are written from scratch in plain JavaScript with no third-party libraries.
+Apart from three.js, the site, demos and maps are written from scratch in plain JavaScript.
 
 Summaries are automatic and can be wrong, and many arXiv papers are not yet peer reviewed. Always check the original paper.
 
