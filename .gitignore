@@ -1,0 +1,10 @@
+.claude/
+__pycache__/
+*.tmp
+.DS_Store
+# generated every day by the workflow, not committed (keeps the repo small)
+cache/
+site/data/index.json
+site/data/graph.json
+site/data/meta.json
+site/data/papers/

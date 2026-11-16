@@ -1,0 +1,85 @@
+name: Update papers and publish
+
+on:
+  schedule:
+    - cron: "17 6 * * *"   # every day at 06:17 UTC, after arXiv's daily announcement
+  workflow_dispatch:        # "Run workflow" button in the Actions tab
+  push:
+    branches: [main]
+
+permissions:
+  contents: write   # weekly status commit (keeps the schedule from being paused)
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      S2_API_KEY: ${{ secrets.S2_API_KEY }}              # optional
+      HAS_AI: ${{ secrets.ANTHROPIC_API_KEY != '' }}      # optional, off unless the secret exists
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The paper archive and reference cache live in the Actions cache, not in git.
+      - uses: actions/cache@v4
+        with:
+          path: cache
+          key: paper-data-${{ github.run_id }}
+          restore-keys: paper-data-
+
+      - name: Fetch newest papers and build data
+        run: python scripts/update.py
+
+      - name: Optional AI summaries (only if ANTHROPIC_API_KEY secret is set)
+        if: env.HAS_AI == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+          AI_MAX: ${{ vars.AI_MAX }}
+        run: |
+          pip install --quiet anthropic
+          python scripts/ai_summaries.py
+          python scripts/update.py --offline
+
+      - name: Weekly status note
+        if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+        run: |
+          if [ "$(date -u +%u)" = "1" ]; then
+            python - <<'PY'
+          import json
+          m = json.load(open("site/data/meta.json"))
+          lines = [f"# Status", "", f"Last weekly check: {m['updated']}", "", f"Papers on the site: {m['count']} (last {m['days']} days)", "", "| Area | Papers |", "|---|---|"]
+          lines += [f"| {k} | {v} |" for k, v in sorted(m["subfieldCounts"].items(), key=lambda kv: -kv[1])]
+          open("STATUS.md", "w").write("\n".join(lines) + "\n")
+          PY
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add STATUS.md
+            git commit -m "Weekly status update" || true
+            git push || true
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
