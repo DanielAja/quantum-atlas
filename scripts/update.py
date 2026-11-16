@@ -666,6 +666,7 @@ def main():
             "g": graph["cluster"][i],
             "ai": 1 if aisum else 0,
             "h": shard_of(p["id"]),
+            "pc": p["primary"],
         })
         doi = p["doi"] or ("10.48550/arXiv." + p["id"])
         shards[shard_of(p["id"])][p["id"]] = {

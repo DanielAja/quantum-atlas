@@ -90,7 +90,7 @@ export function createCosmos(container, opts) {
   renderer.domElement.setAttribute('role', 'img');
   renderer.domElement.setAttribute('aria-label', 'A galaxy where each glowing star is a recent quantum physics paper, grouped by research area.');
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x070815, hero ? 0.0045 : 0.0028);
+  scene.fog = new THREE.FogExp2(0x0c0d10, hero ? 0.0045 : 0.0028);
   const camera = new THREE.PerspectiveCamera(55, 1, 0.5, 2000);
   camera.position.set(0, hero ? 70 : 95, hero ? 150 : 175);
 
@@ -172,12 +172,12 @@ export function createCosmos(container, opts) {
   }
   const dustGeo = new THREE.BufferGeometry();
   dustGeo.setAttribute('position', new THREE.BufferAttribute(dust, 3));
-  const dustMat = new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, color: 0x9a93c9, transparent: true, opacity: 0.55, depthWrite: false, fog: false });
+  const dustMat = new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, color: 0x9aa1ab, transparent: true, opacity: 0.55, depthWrite: false, fog: false });
   scene.add(new THREE.Points(dustGeo, dustMat));
 
   const nebTex = glowTexture(256, -0.08);
   const nebulae = subs.map((s, i) => {
-    const m = new THREE.SpriteMaterial({ map: nebTex, color: new THREE.Color(s.color), transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending });
+    const m = new THREE.SpriteMaterial({ map: nebTex, color: new THREE.Color(s.color), transparent: true, opacity: 0.10, depthWrite: false, blending: THREE.AdditiveBlending });
     const sp = new THREE.Sprite(m);
     sp.position.copy(anchors[i]);
     const cnt = papers.filter((p) => p.s === s.id).length;
@@ -187,7 +187,7 @@ export function createCosmos(container, opts) {
     return sp;
   });
   // the glowing core of the galaxy
-  const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: nebTex, color: 0xb9a8ff, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: nebTex, color: 0xe9ebee, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
   core.scale.set(70, 70, 1);
   scene.add(core);
 
@@ -385,7 +385,7 @@ export function createCosmos(container, opts) {
     for (let i = 0; i < N; i++) alphas[i] = fn(papers[i]) ? 1 : 0.07;
     geo.attributes.alpha.needsUpdate = true;
     const visible = new Set(papers.filter((p, i) => alphas[i] > 0.5).map((p) => p.s));
-    labels.forEach((l, i) => { l.el.classList.toggle('dim', !visible.has(l.id)); nebulae[i].material.opacity = visible.has(l.id) ? 0.16 : 0.03; });
+    labels.forEach((l, i) => { l.el.classList.toggle('dim', !visible.has(l.id)); nebulae[i].material.opacity = visible.has(l.id) ? 0.10 : 0.02; });
     if (ideaLabels.length) setIdeas(true);
   }
 

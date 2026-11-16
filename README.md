@@ -6,16 +6,27 @@ Live site: https://danielaja.github.io/quantum-atlas/
 
 Quantum Atlas reads the newest papers on arXiv every day and turns them into something a curious person can explore:
 
-- **Explore**: a living 3D galaxy on the home page where every star is a paper (colour = field, brightness = freshness). Hover to peek, click to dive in. Below it: a daily *Star of the day* with its demo, a marquee of trending ideas, and the fresh-papers feed with search, field filters and sorting.
+- **Explore**: a living 3D galaxy on the home page where every point of light is a paper (colour = field, brightness = freshness). Hover to peek, click to dive in. Below it: a spectrum strip that filters by field, a daily *Paper of the day* with its figure, an intensity profile of trending ideas, and a table of contents of fresh papers with search, filters and sorting.
 - **Galaxy**: the full-screen 3D map. Orbit, zoom, filter by field and time, light up idea clusters, show idea names floating over the regions where they appear, and click any star to see its connected papers (shared ideas, authors, citations, shared references). A flat 2D view is one click away and is used automatically without WebGL.
 - **Paper pages**: summary, main claims, "why it matters", the original abstract, plain explanations of every key idea, connected papers, a BibTeX citation, links to arXiv, PDF and DOI, and the matching interactive demo.
 - **Fields**: a PhD compass. 14 regions of quantum physics with how busy each is and what a PhD there looks like; hovering a field turns the galaxy to it, and a five-question quiz points the galaxy at your best match. Your personal compass fills in as you read and save.
-- **Play**: 16 hands-on simulations (Bloch sphere, interferometer, double slit, Bell/CHSH test, tunnelling, harmonic oscillator, decoherence, Rabi oscillations, spin chain, quantum walk, BB84, Grover search, error correction, quantum sensing, the Page curve, Bose–Einstein condensation).
+- **Play**: 16 numbered, hands-on figures (Bloch sphere, interferometer, double slit, Bell/CHSH test, tunnelling, harmonic oscillator, decoherence, Rabi oscillations, spin chain, quantum walk, BB84, Grover search, error correction, quantum sensing, the Page curve, Bose–Einstein condensation).
 - **Learn**: a twelve-stop beginner's orbit, a searchable glossary and free places to go deeper.
-- **Saved**: your hearted papers lit up as "your constellation", exportable as text or BibTeX. Stored only in your browser.
+- **Saved**: your starred papers lit up as "your constellation", exportable as text or BibTeX. Stored only in your browser.
 - **⌘K / "/"**: a search palette for papers, ideas, fields, demos and pages from anywhere.
 
 It started as a tool for choosing a PhD direction, so breadth matters: besides `quant-ph` it reads quantum-related papers from `cond-mat.quant-gas`, `cond-mat.mes-hall`, `cond-mat.str-el`, `cond-mat.supr-con`, `hep-th`, `gr-qc`, `physics.atom-ph` and `physics.optics`.
+
+## Design: the Spectrograph
+
+The site is designed to look like a physics instrument and a journal, not a generic template. Every visual choice comes from the subject:
+
+- **Colour is data.** Each of the 14 fields is drawn in the colour of a real atomic emission line at its true wavelength (Hα 656.3 nm for high-energy physics, the Na D line for cold atoms, the Ca 422.7 nm line from Aspect's Bell tests for foundations, and so on). The list is in `site/data/concepts.json` and explained on the About page. There are no invented accent colours, no gradients and no glass.
+- **Two surfaces.** Reading happens on a light "photographic plate"; the galaxy and instruments sit on the dark "sky".
+- **Typography from publishing.** [STIX Two Text](https://fonts.google.com/specimen/STIX+Two+Text) (the typeface of scientific journals) for reading, [IBM Plex Mono](https://fonts.google.com/specimen/IBM+Plex+Mono) for arXiv-style metadata.
+- **Physics notation as interface.** Navigation and section labels are Dirac kets (`|explore⟩`, `⟨trending|`), section headings carry equation numbers, demos are numbered figures with captions, and the feed is a journal table of contents.
+- **Drawn from the formulas.** The section dividers are double-slit interference fringes (cos²·sinc²), the logo is the hydrogen Balmer series at true spacing, the field filter is a spectrum with a real nanometre axis, and every field and demo has a hand-drawn line glyph (`site/js/glyphs.js`) of its real object: a transmon, a surface-code patch, a Feynman diagram.
+- **Superposition.** Summaries in the feed sit in two faintly displaced, coloured states and collapse into one when you look at them (hover or focus). Turned off for reduced motion.
 
 ## How it works
 
@@ -68,7 +79,7 @@ python3 -m http.server 8000 --directory site
 - **Reference and citation data:** [Semantic Scholar](https://www.semanticscholar.org) by the Allen Institute for AI, used under the [Semantic Scholar API License](https://www.semanticscholar.org/product/api/license).
 - **DOIs:** resolved by [doi.org](https://www.doi.org); arXiv DOIs are registered with [DataCite](https://datacite.org).
 - **3D:** [three.js](https://threejs.org) r186 (MIT License), loaded from [jsDelivr](https://www.jsdelivr.com) through an import map.
-- **Fonts:** [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif), [Inter](https://fonts.google.com/specimen/Inter), [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) and [Unbounded](https://fonts.google.com/specimen/Unbounded) via Google Fonts, SIL Open Font License 1.1.
+- **Fonts:** [STIX Two Text](https://fonts.google.com/specimen/STIX+Two+Text) and [IBM Plex Mono](https://fonts.google.com/specimen/IBM+Plex+Mono) via Google Fonts, SIL Open Font License 1.1.
 - **Design inspiration:** award-winning WebGL sites such as Igloo Inc, Lusion, Active Theory, NASA's Eyes and the Wikiverse/100,000 Stars galaxies.
 - **Explanations** link to [Wikipedia](https://www.wikipedia.org), [Quantum Country](https://quantum.country), the [Error Correction Zoo](https://errorcorrectionzoo.org), the [Quantum Algorithm Zoo](https://quantumalgorithmzoo.org) and other free resources.
 - **Hosting and automation:** GitHub Pages and GitHub Actions (`actions/checkout`, `actions/setup-python`, `actions/cache`, `actions/configure-pages`, `actions/upload-pages-artifact`, `actions/deploy-pages`).
