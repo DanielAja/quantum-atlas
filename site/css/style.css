@@ -406,3 +406,20 @@ body[data-route="map"] footer { display: none; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 .search-btn .mob { display: none; font-size: 1.1rem; }
 @media (max-width: 900px) { .search-btn .mob { display: inline; } }
+
+/* search constellation (galaxy) */
+.cons-search { display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid rgba(233,235,238,.14); border-bottom: 1px solid rgba(233,235,238,.14); }
+.cons-row { display: flex; gap: 6px; }
+.cons-row input { flex: 1; min-width: 0; background: transparent; color: var(--sky-fg); border: 1px solid rgba(233,235,238,.35); border-radius: 0; padding: 7px 9px; font: inherit; font-family: var(--mono); font-size: .82rem; }
+.cons-row input:focus-visible { outline: 2px solid var(--h-beta); outline-offset: 1px; }
+.cons-try { font-size: .72rem; opacity: .75; }
+.cons-try .link { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.cons-try .link:hover { color: var(--sky-fg); opacity: 1; }
+.cons-stats { display: flex; gap: 14px; font-family: var(--mono); font-size: .78rem; margin-top: 6px; }
+.cons-stats b { font-size: 1.05rem; font-weight: 500; color: var(--sky-fg); }
+.cons-list { display: grid; }
+.cons-list button { display: flex; gap: 8px; align-items: baseline; text-align: left; background: none; border: 0; border-top: 1px solid rgba(233,235,238,.1); color: var(--sky-fg); font: inherit; font-size: .9rem; line-height: 1.3; padding: 6px 0; cursor: pointer; }
+.cons-list button:hover { background: rgba(233,235,238,.06); }
+.cons-list .line { flex: none; height: .9em; }
+.cons-none { margin: 6px 0 0; }
+.cosmos-label.star { font-family: var(--serif); font-style: italic; font-size: .82rem; color: #fff; }

@@ -256,7 +256,7 @@ export function createCosmos(container, opts) {
   labels.forEach((l) => { l.el.hidden = !showAreaLabels; });
 
   /* ---------- sizing ---------- */
-  let W = 1, H = 1;
+  let W = 1, H = 1, inset = 0;
   function resize() {
     W = container.clientWidth || 1; H = container.clientHeight || 1;
     renderer.setSize(W, H, false);
@@ -265,7 +265,8 @@ export function createCosmos(container, opts) {
     if (hero && opts.offset !== false) {
       if (W > 900) camera.setViewOffset(W, H, -W * 0.27, -H * 0.03, W, H);
       else camera.setViewOffset(W, H, 0, H * 0.3, W, H);
-    } else camera.clearViewOffset();
+    } else if (!hero && inset > 0 && W > 900) camera.setViewOffset(W, H, -inset / 2, 0, W, H);
+    else camera.clearViewOffset();
     camera.updateProjectionMatrix();
     starMat.uniforms.uScale.value = H * 0.9 * renderer.getPixelRatio();
   }
@@ -389,6 +390,108 @@ export function createCosmos(container, opts) {
     if (ideaLabels.length) setIdeas(true);
   }
 
+  /* ---------- search constellation: real links between every matching paper ---------- */
+  const baseSizes = sizes.slice();
+  const conGeo = new THREE.BufferGeometry();
+  const MAXSEG = 6000;
+  conGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXSEG * 6), 3));
+  conGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(MAXSEG * 6), 3));
+  conGeo.setDrawRange(0, 0);
+  const conMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+  const conLines = new THREE.LineSegments(conGeo, conMat);
+  scene.add(conLines);
+  // dotted joins between separate figures: nearest matching papers, not a real link
+  const joinGeo = new THREE.BufferGeometry();
+  joinGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(400 * 6), 3));
+  joinGeo.setDrawRange(0, 0);
+  const joinMat = new THREE.LineDashedMaterial({ color: 0xe9ebee, dashSize: 1.4, gapSize: 1.4, transparent: true, opacity: 0.7, depthWrite: false, fog: false });
+  const joinLines = new THREE.LineSegments(joinGeo, joinMat);
+  scene.add(joinLines);
+  let starLabels = [];
+  const idIndex = new Map(papers.map((p, i) => [p.id, i]));
+  /* ids: matching paper ids. Draws every graph edge whose two ends both match,
+     enlarges the matches, names the best-connected ones and frames the whole figure. */
+  function setConstellation(ids, o = {}) {
+    starLabels.forEach((l) => l.el.remove());
+    starLabels = [];
+    sizes.set(baseSizes);
+    const set = new Set();
+    for (const id of ids || []) { const i = idIndex.get(id); if (i != null) set.add(i); }
+    if (!set.size) {
+      conGeo.setDrawRange(0, 0);
+      joinGeo.setDrawRange(0, 0);
+      geo.attributes.size.needsUpdate = true;
+      return { papers: 0, links: 0, groups: 0, types: {} };
+    }
+    const pos = conGeo.attributes.position.array, colA = conGeo.attributes.color.array;
+    const degree = new Map(), parent = new Map(), types = {};
+    const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+    set.forEach((i) => parent.set(i, i));
+    let k = 0;
+    for (const e of opts.graph ? opts.graph.edges : []) {
+      if (!set.has(e[0]) || !set.has(e[1])) continue;
+      degree.set(e[0], (degree.get(e[0]) || 0) + e[2]);
+      degree.set(e[1], (degree.get(e[1]) || 0) + e[2]);
+      parent.set(find(e[0]), find(e[1]));
+      for (const [b, n] of [[1, 'ideas'], [2, 'authors'], [4, 'citations'], [8, 'references']]) if (e[3] & b) types[n] = (types[n] || 0) + 1;
+      if (k >= MAXSEG) continue;
+      const a = e[0], b = e[1];
+      pos.set([positions[a * 3], positions[a * 3 + 1], positions[a * 3 + 2], positions[b * 3], positions[b * 3 + 1], positions[b * 3 + 2]], k * 6);
+      colA.set([colors[a * 3], colors[a * 3 + 1], colors[a * 3 + 2], colors[b * 3], colors[b * 3 + 1], colors[b * 3 + 2]], k * 6);
+      k++;
+    }
+    conGeo.attributes.position.needsUpdate = true;
+    conGeo.attributes.color.needsUpdate = true;
+    conGeo.setDrawRange(0, k * 2);
+    conMat.opacity = k > 600 ? 0.35 : k > 200 ? 0.55 : 0.85;
+    set.forEach((i) => { sizes[i] = baseSizes[i] * 1.55; });
+    geo.attributes.size.needsUpdate = true;
+    const roots = new Set(); set.forEach((i) => roots.add(find(i)));
+    // Kruskal over the separate figures by 3D distance, so the whole search reads as one constellation
+    let jk = 0;
+    if (roots.size > 1 && set.size <= 400) {
+      const arr = [...set], pairs = [];
+      const d2 = (a, b) => (positions[a * 3] - positions[b * 3]) ** 2 + (positions[a * 3 + 1] - positions[b * 3 + 1]) ** 2 + (positions[a * 3 + 2] - positions[b * 3 + 2]) ** 2;
+      for (let x = 0; x < arr.length; x++) for (let y = x + 1; y < arr.length; y++) if (find(arr[x]) !== find(arr[y])) pairs.push([d2(arr[x], arr[y]), arr[x], arr[y]]);
+      pairs.sort((u, w) => u[0] - w[0]);
+      const jp = joinGeo.attributes.position.array;
+      for (const [, a, b] of pairs) {
+        const ra = find(a), rb = find(b);
+        if (ra === rb) continue;
+        parent.set(ra, rb);
+        jp.set([positions[a * 3], positions[a * 3 + 1], positions[a * 3 + 2], positions[b * 3], positions[b * 3 + 1], positions[b * 3 + 2]], jk * 6);
+        if (++jk >= 399) break;
+      }
+    }
+    joinGeo.attributes.position.needsUpdate = true;
+    joinGeo.setDrawRange(0, jk * 2);
+    joinLines.computeLineDistances();
+    // name the brightest stars of the figure: the most-connected matches
+    const hubs = [...set].sort((a, b) => (degree.get(b) || 0) - (degree.get(a) || 0) || baseSizes[b] - baseSizes[a]).slice(0, mobile ? 4 : 7);
+    starLabels = hubs.map((i) => {
+      const p = papers[i];
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'cosmos-label star';
+      el.style.setProperty('--c', subs[subIndex.get(p.s) || 0].color);
+      el.textContent = p.t.length > 48 ? p.t.slice(0, 46).replace(/\s+\S*$/, '') + '…' : p.t;
+      el.title = p.t;
+      el.addEventListener('click', () => { select(i); opts.onSelect && opts.onSelect({ paper: p }); });
+      labelLayer.append(el);
+      return { el, pos: new THREE.Vector3(positions[i * 3], positions[i * 3 + 1] + 2.2, positions[i * 3 + 2]), id: p.id };
+    });
+    if (o.fly !== false) {
+      const c = new THREE.Vector3(); set.forEach((i) => c.add(new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2])));
+      c.divideScalar(set.size);
+      // frame the bulk of the figure (80th percentile), so a few far-off matches don't push the camera out
+      const ds = [...set].map((i) => c.distanceTo(new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]))).sort((x, y) => x - y);
+      const r = ds[Math.floor((ds.length - 1) * 0.8)];
+      controls.autoRotate = false; idle = 0;
+      flyTo(c, Math.min(260, Math.max(30, r * (W < H ? 2.6 : 1.9) + 12)));
+    }
+    return { papers: set.size, links: k, joins: jk, groups: roots.size, types, hubs: hubs.map((i) => papers[i].id) };
+  }
+
   /* ---------- render loop (pauses when hidden or scrolled away) ---------- */
   const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
   let raf = 0, running = true, visible = true, idle = 0, last = performance.now(), introStart = 0;
@@ -400,7 +503,7 @@ export function createCosmos(container, opts) {
   controls.addEventListener('end', () => { idle = 0; });
   const project = (p) => { v.copy(p).project(camera); return [(v.x * 0.5 + 0.5) * W, (-v.y * 0.5 + 0.5) * H, v.z]; };
   function placeLabels() {
-    const all = showAreaLabels ? labels.concat(ideaLabels) : ideaLabels;
+    const all = starLabels.concat(showAreaLabels ? labels.concat(ideaLabels) : ideaLabels);
     const placed = [];
     for (const l of all) {
       const [x, y, z] = project(l.pos);
@@ -412,7 +515,8 @@ export function createCosmos(container, opts) {
       const dist = camera.position.distanceTo(l.pos);
       const fade = Math.max(0, Math.min(1, (340 - dist) / 120));
       l.el.style.transform = `translate(${x - w / 2}px, ${y - h / 2}px)`;
-      l.el.style.opacity = clash ? 0 : fade;
+      const quiet = starLabels.length && !l.el.classList.contains('star') ? 0.28 : 1;  // let the constellation's names lead
+      l.el.style.opacity = clash ? 0 : fade * quiet;
       l.el.style.pointerEvents = clash || fade < 0.3 ? 'none' : 'auto';
       if (!clash) placed.push(box);
     }
@@ -435,7 +539,7 @@ export function createCosmos(container, opts) {
       if (flight.t >= 1) flight = null;
     }
     idle += dt;
-    if (!hero && !reduced && idle > 12 && !flight && selected < 0) controls.autoRotate = true;
+    if (!hero && !reduced && idle > 12 && !flight && selected < 0 && !starLabels.length) controls.autoRotate = true;
     if (hero && !reduced) {
       mouse.x += (mouse.tx - mouse.x) * 0.04; mouse.y += (mouse.ty - mouse.y) * 0.04;
       stars.rotation.x = mouse.y * 0.06; stars.rotation.z = mouse.x * -0.04;
@@ -452,14 +556,15 @@ export function createCosmos(container, opts) {
   loop();
 
   return {
-    setFilter, setIdeas, focusPaper, focusArea, focusConcept, focusCluster, flyHome,
+    setFilter, setIdeas, setConstellation, focusPaper, focusArea, focusConcept, focusCluster, flyHome,
     screenPos(id) { const i = papers.findIndex((p) => p.id === id); if (i < 0) return null; const [x, y] = project(new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2])); const r = renderer.domElement.getBoundingClientRect(); return [x + r.left, y + r.top]; },
     select: (id) => { const i = papers.findIndex((p) => p.id === id); select(i); },
+    setInset(px) { inset = px; resize(); },
     zoom(f) { const d = camera.position.clone().sub(controls.target).multiplyScalar(f); camera.position.copy(controls.target).add(d); idle = 0; },
     destroy() {
       running = false; cancelAnimationFrame(raf); ro.disconnect(); io.disconnect();
       document.removeEventListener('visibilitychange', onVis);
-      controls.dispose(); geo.dispose(); starMat.dispose(); tex.dispose(); nebTex.dispose(); dustGeo.dispose(); renderer.dispose(); renderer.forceContextLoss();
+      controls.dispose(); geo.dispose(); conGeo.dispose(); conMat.dispose(); joinGeo.dispose(); joinMat.dispose(); starMat.dispose(); tex.dispose(); nebTex.dispose(); dustGeo.dispose(); renderer.dispose(); renderer.forceContextLoss();
       renderer.domElement.remove(); labelLayer.remove();
     },
   };

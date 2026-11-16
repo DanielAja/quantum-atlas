@@ -217,8 +217,9 @@
     const list = pool.length ? pool : D.index;
     return list[hashStr(new Date().toISOString().slice(0, 10)) % list.length];
   }
-  async function viewHome() {
+  async function viewHome(params) {
     setNav('');
+    if (params && params.has('q')) { F.q = params.get('q'); F.sub = ''; F.concept = ''; F.when = '999'; F.shown = 30; }
     const week = D.index.filter((p) => days(p.d) <= 7).length;
     const sc = D.meta.subfieldCounts;
     const potd = paperOfTheDay(), ps = sub(potd.s);
@@ -272,7 +273,7 @@
             <div class="row">
               <label>window <select id="when"><option value="1">last day</option><option value="3">last 3 days</option><option value="7">last week</option><option value="30">last month</option><option value="999">everything</option></select></label>
               <label>order <select id="sort"><option value="new">newest first</option><option value="gentle">easiest to read</option><option value="cited">most cited</option><option value="random">shuffled</option></select></label>
-              <span class="spacer"></span><button class="btn small" id="surprise" type="button">show me something different</button>
+              <span class="spacer"></span><a class="btn small" id="as-cons" href="#/map">draw as a constellation</a><button class="btn small" id="surprise" type="button">show me something different</button>
             </div>
           </div>
           <div id="feed"></div>
@@ -295,6 +296,8 @@
       if (F.sort === 'random') { shuffled = shuffled || shuffle(list.slice()); const set = new Set(list); list = shuffled.filter((p) => set.has(p)); }
       const feed = $app.querySelector('#feed');
       feed.innerHTML = list.length ? toc(list.slice(0, F.shown)) : `<p class="empty">No entries match. Try fewer words or a wider window.</p>`;
+      $app.querySelector('#as-cons').hidden = !F.q.trim();
+      $app.querySelector('#as-cons').href = '#/map?q=' + encodeURIComponent(F.q.trim()) + (F.sub ? '&sub=' + F.sub : '');
       $app.querySelector('#count').textContent = plural(list.length, 'entry').replace('entrys', 'entries') + (F.concept ? ` · ${conName(F.concept)}` : '');
       $app.querySelector('#more').hidden = list.length <= F.shown;
       wireFavs(feed);
@@ -405,13 +408,19 @@
     setNav('map');
     await loadGraph();
     if (!webgl || params.get('flat') === '1') return viewFlatMap(params);
-    const st = { sub: params.get('sub') || '', days: 45, ideas: params.has('concept') };
+    const st = { sub: params.get('sub') || '', days: 45, ideas: params.has('concept'), q: params.get('q') || '' };
     $app.innerHTML = `<section class="map-page sky">
       <div class="cosmos" id="map-cosmos"></div>
       <div class="map-ui panel" id="map-ui">
-        <div class="row map-collapse-row"><span class="mono">|galaxy⟩ · ${D.meta.count.toLocaleString()} papers</span><span class="spacer"></span><button class="btn small map-collapse" type="button" id="ui-toggle" aria-expanded="true">hide</button></div>
+        <div class="row map-collapse-row"><span class="mono" id="map-sum">|galaxy⟩ · ${D.meta.count.toLocaleString()} papers</span><span class="spacer"></span><button class="btn small map-collapse" type="button" id="ui-toggle" aria-expanded="true">hide</button></div>
         <h1>The galaxy</h1>
         <p class="mono" style="margin:0">drag to orbit · scroll or pinch to zoom · click a point. Lines join papers that share ideas, authors or references.</p>
+        <form class="cons-search" id="cons-form" role="search">
+          <label class="label" for="cons-q" style="margin:0">⟨search| draws a constellation</label>
+          <div class="cons-row"><input id="cons-q" type="search" placeholder="e.g. black hole, Majorana, Lukin" value="${esc(st.q)}" autocomplete="off" spellcheck="false"><button class="btn small" type="submit">draw</button></div>
+          <div class="cons-try mono">try: ${['entanglement entropy', 'surface code', 'Rydberg', 'gravitational waves', 'Floquet'].map((t) => `<button type="button" class="link" data-try="${t}">${t}</button>`).join(' · ')}</div>
+          <div id="cons-out" aria-live="polite"></div>
+        </form>
         <div class="filters" role="group" aria-label="Filter by field">
           <button class="chip" type="button" data-msub="">all fields</button>
           ${D.concepts.subfields.slice().sort((a, b) => a.nm - b.nm).map((s) => `<button class="chip" type="button" data-msub="${s.id}" style="--c:${s.color}"><span class="line"></span>${esc(s.name.toLowerCase())}</button>`).join('')}
@@ -427,10 +436,11 @@
     const panel = $app.querySelector('.map-panel');
     const ui = $app.querySelector('#map-ui');
     const toggle = $app.querySelector('#ui-toggle');
-    const closeUI = () => { ui.classList.add('closed'); toggle.textContent = 'filters'; toggle.setAttribute('aria-expanded', 'false'); };
-    if (innerWidth < 900) closeUI();
-    toggle.addEventListener('click', () => { const c = ui.classList.toggle('closed'); toggle.textContent = c ? 'filters' : 'hide'; toggle.setAttribute('aria-expanded', !c); });
     let g = null;
+    const syncInset = () => { if (g) g.setInset(ui.classList.contains('closed') ? 0 : ui.getBoundingClientRect().right); };
+    const closeUI = () => { ui.classList.add('closed'); toggle.textContent = 'filters'; toggle.setAttribute('aria-expanded', 'false'); syncInset(); };
+    if (innerWidth < 900) closeUI();
+    toggle.addEventListener('click', () => { const c = ui.classList.toggle('closed'); toggle.textContent = c ? 'filters' : 'hide'; toggle.setAttribute('aria-expanded', !c); syncInset(); });
     function wire() {
       panel.querySelector('[data-close]').addEventListener('click', () => { panel.hidden = true; if (g) g.select(null); });
       panel.querySelectorAll('[data-goto]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); const p = D.byId.get(a.dataset.goto); if (g) g.focusPaper(p.id); showPaper(p); }));
@@ -462,9 +472,39 @@
         <span class="label">recent papers</span><div class="related">${ps.slice(0, 6).map((p) => `<a href="#" data-goto="${p.id}"><small>arXiv:${esc(p.id)} · ${ago(p.d)}</small><b>${esc(p.t)}</b></a>`).join('')}</div>`;
       wire();
     }
-    const apply = () => {
+    let cons = null;
+    const matchQ = (p, terms) => { const hay = (p.t + ' ' + p.x + ' ' + p.a.join(' ') + ' ' + p.c.map(conName).join(' ') + ' ' + sub(p.s).name + ' ' + p.id).toLowerCase(); return terms.every((t) => hay.includes(t)); };
+    const baseFn = (p) => days(p.d) <= st.days && (!st.sub || p.s === st.sub || (p.s2 || []).includes(st.sub));
+    const drawCons = (fly) => {
+      const out = $app.querySelector('#cons-out');
+      const terms = st.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const hits = terms.length ? D.index.filter((p) => baseFn(p) && matchQ(p, terms)) : [];
+      if (!g) return hits;
+      const sum = $app.querySelector('#map-sum');
+      if (!terms.length) { g.setConstellation([]); out.innerHTML = ''; cons = null; sum.textContent = `|galaxy⟩ · ${D.meta.count.toLocaleString()} papers`; return hits; }
+      cons = g.setConstellation(hits.map((p) => p.id), { fly });
+      sum.textContent = `⟨${st.q.trim()}| ${hits.length} stars · ${cons.links} links`;
+      if (!hits.length) { out.innerHTML = `<p class="mono cons-none">no papers match “${esc(st.q)}”${st.sub || st.days < 45 ? ' with these filters' : ''}</p>`; return hits; }
+      const tl = Object.entries(cons.types).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${k}`).join(' · ');
+      const hubs = cons.hubs.map((id) => D.byId.get(id));
+      out.innerHTML = `<div class="cons-stats"><span><b>${hits.length}</b> stars</span><span><b>${cons.links}</b> links</span><span><b>${cons.groups}</b> ${cons.groups === 1 ? 'figure' : 'figures'}</span></div>
+        <p class="mono" style="margin:4px 0 0">${tl ? `solid lines: shared ${esc(tl)}` : 'no direct links between these papers yet'}${cons.joins ? `<br>dotted lines: nearest match between separate figures, not a link` : ''}</p>
+        <span class="label" style="margin:10px 0 4px">brightest stars</span>
+        <div class="cons-list">${hubs.map((p) => `<button type="button" data-cons="${esc(p.id)}" style="--c:${sub(p.s).color}"><span class="line"></span>${esc(p.t)}</button>`).join('')}</div>
+        <div class="row" style="margin-top:8px"><button type="button" class="chip" id="cons-clear">clear</button><a class="chip" href="#/?q=${encodeURIComponent(st.q)}">read as a list</a></div>`;
+      out.querySelectorAll('[data-cons]').forEach((b) => b.addEventListener('click', () => { const p = D.byId.get(b.dataset.cons); g.focusPaper(p.id); showPaper(p); if (innerWidth < 900) closeUI(); }));
+      out.querySelector('#cons-clear').addEventListener('click', () => { st.q = ''; $app.querySelector('#cons-q').value = ''; history.replaceState(null, '', '#/map'); apply(); g.flyHome(); });
+      return hits;
+    };
+    const form = $app.querySelector('#cons-form'), qIn = $app.querySelector('#cons-q');
+    const runQ = () => { st.q = qIn.value; const u = new URLSearchParams(); if (st.q) u.set('q', st.q); if (st.sub) u.set('sub', st.sub); history.replaceState(null, '', '#/map' + (u.toString() ? '?' + u : '')); panel.hidden = true; if (g) g.select(null); apply(true); };
+    form.addEventListener('submit', (e) => { e.preventDefault(); qIn.blur(); runQ(); if (innerWidth < 900 && st.q) closeUI(); });
+    $app.querySelectorAll('[data-try]').forEach((b) => b.addEventListener('click', () => { qIn.value = b.dataset.try; runQ(); }));
+    const apply = (fly) => {
       $app.querySelectorAll('[data-msub]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.msub === st.sub));
-      const fn = (p) => days(p.d) <= st.days && (!st.sub || p.s === st.sub || (p.s2 || []).includes(st.sub));
+      const hits = drawCons(fly === true);
+      const hitSet = st.q.trim() ? new Set(hits.map((p) => p.id)) : null;
+      const fn = hitSet ? (p) => hitSet.has(p.id) : baseFn;
       if (g) g.setFilter(fn);
       const counts = {};
       for (const p of D.index) if (fn(p) && p.g >= 0) counts[p.g] = (counts[p.g] || 0) + 1;
@@ -474,7 +514,7 @@
       }).join('') || '<p class="mono">no clusters in this window</p>';
       $app.querySelectorAll('[data-cl]').forEach((b) => b.addEventListener('click', () => { if (g) g.focusCluster(+b.dataset.cl); if (innerWidth < 900) closeUI(); }));
     };
-    $app.querySelectorAll('[data-msub]').forEach((b) => b.addEventListener('click', () => { st.sub = b.dataset.msub; apply(); if (g) { if (st.sub) g.focusArea(st.sub); else g.flyHome(); } }));
+    $app.querySelectorAll('[data-msub]').forEach((b) => b.addEventListener('click', () => { st.sub = b.dataset.msub; if (st.q.trim()) { apply(true); return; } apply(); if (g) { if (st.sub) g.focusArea(st.sub); else g.flyHome(); } }));
     const dIn = $app.querySelector('#d-in');
     dIn.addEventListener('input', () => { st.days = +dIn.value; $app.querySelector('#d-out').textContent = st.days === 1 ? '1 day' : st.days + ' days'; apply(); });
     $app.querySelector('#ideas-btn').addEventListener('click', (e) => { st.ideas = !st.ideas; e.currentTarget.setAttribute('aria-pressed', st.ideas); if (g) g.setIdeas(st.ideas); });
@@ -486,12 +526,13 @@
       onArea: (id) => { st.sub = id; apply(); g.focusArea(id); },
     });
     if (!g) { if ($app.querySelector('#map-cosmos')) viewFlatMap(params); return; }
-    apply();
+    syncInset();
+    apply(!!st.q);
     if (st.ideas) g.setIdeas(true);
     const focus = params.get('focus'), concept = params.get('concept');
     if (focus && D.byId.get(focus)) setTimeout(() => { g.focusPaper(focus); showPaper(D.byId.get(focus)); }, 300);
     if (concept) setTimeout(() => { g.focusConcept(concept); showConcept(concept); }, 300);
-    if (st.sub) setTimeout(() => g.focusArea(st.sub), 300);
+    if (st.sub && !st.q) setTimeout(() => g.focusArea(st.sub), 300);
   }
   function viewFlatMap(params) {
     $app.innerHTML = `<div class="wrap page doc">${secHead('|galaxy⟩', 'The flat map', `Every dot is a paper; lines join papers that share ideas, authors or references.${webgl ? ' <a href="#/map">Back to the 3D galaxy</a>.' : ''}`, '', 'h1')}<div id="map-root"></div></div>`;
@@ -776,6 +817,7 @@
         groups.push(['fields', D.concepts.subfields.filter((s) => m(s.name + ' ' + s.plain + ' ' + s.line)).slice(0, 3).map((s) => ({ t: s.name, h: '#/fields/' + s.id, i: QA.glyph(s.id, 18) }))]);
         groups.push(['figures', Object.values(QA.demos).filter((d) => m(d.title + ' ' + (d.blurb || ''))).slice(0, 3).map((d) => ({ t: d.title, h: '#/play/' + d.id, i: QA.glyph(d.id, 18) }))]);
         groups.push(['go to', pages.filter(([t]) => m(t)).map(([t, h, i]) => ({ t, h, i: QA.glyph(i, 18) }))]);
+        groups.push(['galaxy', [{ t: `draw “${input.value.trim()}” as a constellation`, h: '#/map?q=' + encodeURIComponent(input.value.trim()), i: QA.glyph('bloch', 18) }]]);
       }
       items = [];
       res.innerHTML = groups.filter(([, l]) => l.length).map(([gname, l]) => `<div class="grp">${gname}</div>` + l.map((it) => { items.push(it); return `<a href="${it.h}" role="option" data-k="${items.length - 1}"><span class="ic">${it.i}</span><span class="t">${esc(it.t)}</span></a>`; }).join('')).join('') || '<p class="mono" style="padding:12px 18px">nothing in this part of the spectrum</p>';
@@ -822,7 +864,7 @@
     window.scrollTo(0, 0);
     try {
       switch (parts[0]) {
-        case '': await viewHome(); break;
+        case '': await viewHome(params); break;
         case 'paper': await viewPaper(parts.slice(1).join('/')); break;
         case 'map': await viewMap(params); break;
         case 'fields': if (parts[1]) viewField(parts[1]); else await viewFields(); break;
